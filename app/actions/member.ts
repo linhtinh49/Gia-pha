@@ -28,22 +28,15 @@ export async function deleteMemberProfile(memberId: string) {
     throw new Error("Từ chối truy cập. Chỉ admin mới có quyền xoá hồ sơ.");
   }
 
-  // 2. Check for existing relationships
-  const { data: relationships, error: relationshipError } = await supabase
+  // 2. Delete all relationships
+  const { error: relationshipError } = await supabase
     .from("relationships")
-    .select("id")
-    .or(`person_a.eq.${memberId},person_b.eq.${memberId}`)
-    .limit(1);
+    .delete()
+    .or(`person_a.eq.${memberId},person_b.eq.${memberId}`);
 
   if (relationshipError) {
-    console.error("Error checking relationships:", relationshipError);
-    throw new Error("Lỗi kiểm tra mối quan hệ gia đình.");
-  }
-
-  if (relationships && relationships.length > 0) {
-    throw new Error(
-      "Không thể xoá. Vui lòng xoá hết các mối quan hệ gia đình của người này trước.",
-    );
+    console.error("Error deleting relationships:", relationshipError);
+    throw new Error("Lỗi khi xoá các mối quan hệ gia đình.");
   }
 
   // 3. Delete the member
