@@ -28,6 +28,7 @@ export default function DeleteMemberButton({
     try {
       const result = await deleteMemberProfile(memberId);
       if (result.success) {
+        router.refresh();
         router.push("/dashboard");
       }
     } catch (error: any) {
