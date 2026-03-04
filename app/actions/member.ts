@@ -57,8 +57,9 @@ export async function deleteMemberProfile(memberId: string) {
     throw new Error("Đã xảy ra lỗi khi xoá hồ sơ.");
   }
 
-  // 4. Revalidate and redirect
+  // 4. Revalidate cache
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/members");
-  redirect("/dashboard");
+
+  return { success: true };
 }

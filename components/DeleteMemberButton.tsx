@@ -1,7 +1,7 @@
 "use client";
 
 import { deleteMemberProfile } from "@/app/actions/member";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface DeleteMemberButtonProps {
@@ -12,6 +12,8 @@ export default function DeleteMemberButton({
   memberId,
 }: DeleteMemberButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const router = useRouter();
 
   const handleDelete = async () => {
     if (
@@ -24,14 +26,12 @@ export default function DeleteMemberButton({
 
     setIsDeleting(true);
     try {
-      await deleteMemberProfile(memberId);
-      // Note: the server action will redirect on success
-    } catch (error) {
-      if (isRedirectError(error)) {
-        throw error;
+      const result = await deleteMemberProfile(memberId);
+      if (result.success) {
+        router.push("/dashboard");
       }
+    } catch (error: any) {
       console.error("Delete failed:", error);
-      // @ts-expect-error - error is caught as unknown
       alert(error.message || "Đã xảy ra lỗi khi xoá hồ sơ.");
       setIsDeleting(false);
     }
