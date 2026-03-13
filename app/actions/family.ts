@@ -35,6 +35,10 @@ export async function createFamily(familyName: string) {
         }
     }
 
+    if (!unique) {
+        throw new Error("Không thể tạo mã duy nhất. Vui lòng thử lại.");
+    }
+
     // 1. Create family
     const { data: family, error: familyError } = await supabase
         .from("families")
@@ -59,7 +63,7 @@ export async function createFamily(familyName: string) {
         throw new Error("Không thể liên kết tài khoản với Gia Phả.");
     }
 
-    revalidatePath("/");
+    // 3. Revalidate and redirect
     return { success: true, family };
 }
 
