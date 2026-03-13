@@ -9,100 +9,110 @@ function generateJoinCode() {
 }
 
 export async function createFamily(familyName: string) {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    try {
+        const cookieStore = await cookies();
+        const supabase = createClient(cookieStore);
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
 
-    if (!user) {
-        throw new Error("Vui lòng đăng nhập.");
-    }
-
-    // Generate unique code securely
-    let code = generateJoinCode();
-    let unique = false;
-    let retries = 0;
-
-    while (!unique && retries < 5) {
-        const { data } = await supabase.from("families").select("id").eq("join_code", code).single();
-        if (!data) {
-            unique = true;
-        } else {
-            code = generateJoinCode();
-            retries++;
+        if (!user) {
+            throw new Error("Vui lòng đăng nhập.");
         }
+
+        // Generate unique code securely
+        let code = generateJoinCode();
+        let unique = false;
+        let retries = 0;
+
+        while (!unique && retries < 5) {
+            const { data } = await supabase.from("families").select("id").eq("join_code", code).limit(1);
+            if (!data || data.length === 0) {
+                unique = true;
+            } else {
+                code = generateJoinCode();
+                retries++;
+            }
+        }
+
+        if (!unique) {
+            throw new Error("Không thể tạo mã duy nhất. Vui lòng thử lại.");
+        }
+
+        // 1. Create family
+        const { data: familyData, error: familyError } = await supabase
+            .from("families")
+            .insert([{ name: familyName, join_code: code }])
+            .select();
+
+        if (familyError || !familyData || familyData.length === 0) {
+            console.error("Error creating family:", familyError);
+            throw new Error("Có lỗi xảy ra khi tạo Gia Phả. Vui lòng thử lại.");
+        }
+
+        const family = familyData[0];
+
+        // 2. Update user profile to link to family and become admin
+        const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ family_id: family.id, role: "admin" })
+            .eq("id", user.id);
+
+        if (profileError) {
+            console.error("Error linking profile to family:", profileError);
+            throw new Error("Không thể liên kết tài khoản với Gia Phả.");
+        }
+
+        return { success: true, family };
+    } catch (error: any) {
+        console.error("Create Family Action Error:", error);
+        throw new Error(error.message || "Lỗi máy chủ không xác định.");
     }
-
-    if (!unique) {
-        throw new Error("Không thể tạo mã duy nhất. Vui lòng thử lại.");
-    }
-
-    // 1. Create family
-    const { data: family, error: familyError } = await supabase
-        .from("families")
-        .insert([{ name: familyName, join_code: code }])
-        .select()
-        .single();
-
-    if (familyError || !family) {
-        console.error("Error creating family:", familyError);
-        throw new Error("Có lỗi xảy ra khi tạo Gia Phả. Vui lòng thử lại.");
-    }
-
-    // 2. Update user profile to link to family and become admin
-    const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ family_id: family.id, role: "admin" })
-        .eq("id", user.id);
-
-    if (profileError) {
-        console.error("Error linking profile to family:", profileError);
-        // Ideally rollback family creation here, but ignoring for simplicity
-        throw new Error("Không thể liên kết tài khoản với Gia Phả.");
-    }
-
-    // 3. Revalidate and redirect
-    return { success: true, family };
 }
 
 export async function joinFamily(joinCode: string) {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    try {
+        const cookieStore = await cookies();
+        const supabase = createClient(cookieStore);
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
 
-    if (!user) {
-        throw new Error("Vui lòng đăng nhập.");
+        if (!user) {
+            throw new Error("Vui lòng đăng nhập.");
+        }
+
+        // 1. Find family by code
+        const { data: familyData, error: findError } = await supabase
+            .from("families")
+            .select("id, name")
+            .eq("join_code", joinCode)
+            .limit(1);
+
+        if (findError || !familyData || familyData.length === 0) {
+            throw new Error("Mã Gia Phả không chính xác hoặc không tồn tại.");
+        }
+
+        const family = familyData[0];
+
+        // 2. Update user profile
+        const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ family_id: family.id, role: "member" })
+            .eq("id", user.id);
+
+        if (profileError) {
+            console.error("Error joining family:", profileError);
+            throw new Error("Đã có lỗi xảy ra khi tham gia Gia Phả.");
+        }
+
+        return { success: true, family };
+    } catch (error: any) {
+        console.error("Join Family Action Error:", error);
+        throw new Error(error.message || "Lỗi máy chủ không xác định.");
     }
-
-    // 1. Find family by code
-    const { data: family, error: findError } = await supabase
-        .from("families")
-        .select("id, name")
-        .eq("join_code", joinCode)
-        .single();
-
-    if (findError || !family) {
-        throw new Error("Mã Gia Phả không chính xác hoặc không tồn tại.");
-    }
-
-    // 2. Update user profile
-    const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ family_id: family.id, role: "member" })
-        .eq("id", user.id);
-
-    if (profileError) {
-        console.error("Error joining family:", profileError);
-        throw new Error("Đã có lỗi xảy ra khi tham gia Gia Phả.");
-    }
-
-    revalidatePath("/");
-    return { success: true, family };
 }
 
 export async function getMyFamilyInfo() {
