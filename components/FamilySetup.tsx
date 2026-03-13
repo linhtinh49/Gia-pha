@@ -22,6 +22,9 @@ export default function FamilySetup() {
             const res = await createFamily(familyName.trim());
             if (res.success) {
                 window.location.href = "/dashboard";
+            } else {
+                setError(res.error || "Failed to create family.");
+                setLoading(false);
             }
         } catch (err: any) {
             setError(err.message || "Failed to create family.");
@@ -38,6 +41,9 @@ export default function FamilySetup() {
             const res = await joinFamily(joinCode.trim());
             if (res.success) {
                 window.location.href = "/dashboard";
+            } else {
+                setError(res.error || "Failed to join family.");
+                setLoading(false);
             }
         } catch (err: any) {
             setError(err.message || "Failed to join family.");

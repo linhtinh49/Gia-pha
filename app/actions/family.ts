@@ -18,7 +18,7 @@ export async function createFamily(familyName: string) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            throw new Error("Vui lòng đăng nhập.");
+            return { success: false, error: "Vui lòng đăng nhập." };
         }
 
         // Generate unique code securely
@@ -37,7 +37,7 @@ export async function createFamily(familyName: string) {
         }
 
         if (!unique) {
-            throw new Error("Không thể tạo mã duy nhất. Vui lòng thử lại.");
+            return { success: false, error: "Không thể tạo mã duy nhất. Vui lòng thử lại." };
         }
 
         // 1. Create family and link admin atomically using RPC
@@ -48,13 +48,13 @@ export async function createFamily(familyName: string) {
 
         if (rpcError || !family) {
             console.error("Error creating family via RPC:", rpcError);
-            throw new Error("Có lỗi xảy ra khi tạo Gia Phả. Vui lòng thử lại.");
+            return { success: false, error: "Có lỗi xảy ra khi tạo Gia Phả. Vui lòng thử lại." };
         }
 
         return { success: true, family };
     } catch (error: any) {
         console.error("Create Family Action Error:", error);
-        throw new Error(error.message || "Lỗi máy chủ không xác định.");
+        return { success: false, error: error.message || "Lỗi máy chủ không xác định." };
     }
 }
 
@@ -68,37 +68,23 @@ export async function joinFamily(joinCode: string) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            throw new Error("Vui lòng đăng nhập.");
+            return { success: false, error: "Vui lòng đăng nhập." };
         }
 
-        // 1. Find family by code
-        const { data: familyData, error: findError } = await supabase
-            .from("families")
-            .select("id, name")
-            .eq("join_code", joinCode)
-            .limit(1);
+        // 1. Join family atomically using RPC
+        const { data: family, error: rpcError } = await supabase.rpc("join_family_by_code", {
+            target_join_code: joinCode,
+        });
 
-        if (findError || !familyData || familyData.length === 0) {
-            throw new Error("Mã Gia Phả không chính xác hoặc không tồn tại.");
-        }
-
-        const family = familyData[0];
-
-        // 2. Update user profile
-        const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ family_id: family.id, role: "member" })
-            .eq("id", user.id);
-
-        if (profileError) {
-            console.error("Error joining family:", profileError);
-            throw new Error("Đã có lỗi xảy ra khi tham gia Gia Phả.");
+        if (rpcError) {
+            console.error("Join family RPC error:", rpcError);
+            return { success: false, error: "Mã Gia Phả không chính xác hoặc không tồn tại." };
         }
 
         return { success: true, family };
     } catch (error: any) {
         console.error("Join Family Action Error:", error);
-        throw new Error(error.message || "Lỗi máy chủ không xác định.");
+        return { success: false, error: error.message || "Lỗi máy chủ không xác định." };
     }
 }
 
