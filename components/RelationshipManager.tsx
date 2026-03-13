@@ -13,6 +13,7 @@ interface RelationshipManagerProps {
   personId: string;
   isAdmin: boolean;
   personGender: string; // Passed down to calculate default spouse gender
+  familyId?: string | null;
 }
 
 interface EnrichedRelationship {
@@ -27,6 +28,7 @@ export default function RelationshipManager({
   personId,
   isAdmin,
   personGender,
+  familyId,
 }: RelationshipManagerProps) {
   const supabase = createClient();
   const dashboardContext = useContext(DashboardContext);
@@ -261,6 +263,7 @@ export default function RelationshipManager({
         person_b: personB,
         type: type,
         note: newRelNote ? newRelNote : null,
+        family_id: familyId || null,
       });
 
       if (error) throw error;
@@ -299,9 +302,11 @@ export default function RelationshipManager({
           full_name: string;
           gender: "male" | "female" | "other";
           birth_year?: number;
+          family_id?: string | null;
         } = {
           full_name: child.name.trim(),
           gender: child.gender,
+          family_id: familyId || null,
         };
         if (child.birthYear.trim() !== "") {
           const year = parseInt(child.birthYear);
@@ -326,6 +331,7 @@ export default function RelationshipManager({
           person_a: personId,
           person_b: newChildId,
           type: "biological_child",
+          family_id: familyId || null,
         });
 
         // 3. Insert Relationship to Second Parent (spouse), if selected
@@ -334,6 +340,7 @@ export default function RelationshipManager({
             person_a: selectedSpouseId,
             person_b: newChildId,
             type: "biological_child",
+            family_id: familyId || null,
           });
         }
 
@@ -382,9 +389,11 @@ export default function RelationshipManager({
         full_name: string;
         gender: "male" | "female" | "other";
         birth_year?: number;
+        family_id?: string | null;
       } = {
         full_name: newSpouseName.trim(),
         gender: newSpouseGender,
+        family_id: familyId || null,
       };
 
       if (newSpouseBirthYear.trim() !== "") {
@@ -409,6 +418,7 @@ export default function RelationshipManager({
         person_b: newSpouseId,
         type: "marriage",
         note: newSpouseNote.trim() || null,
+        family_id: familyId || null,
       });
 
       if (relError) throw relError;
@@ -657,57 +667,56 @@ export default function RelationshipManager({
                 (searchTerm.length === 0 &&
                   !selectedTargetId &&
                   recentMembers.length > 0)) && (
-                <div className="mt-2 bg-white border border-stone-200 rounded-md shadow-lg max-h-[250px] overflow-y-auto">
-                  <div className="px-3 py-1.5 bg-stone-100 text-[10px] font-bold text-stone-500 uppercase tracking-wide border-b border-stone-200 sticky top-0 z-10">
-                    {searchResults.length > 0
-                      ? "Kết quả tìm kiếm"
-                      : "Thành viên vừa thêm gần đây"}
+                  <div className="mt-2 bg-white border border-stone-200 rounded-md shadow-lg max-h-[250px] overflow-y-auto">
+                    <div className="px-3 py-1.5 bg-stone-100 text-[10px] font-bold text-stone-500 uppercase tracking-wide border-b border-stone-200 sticky top-0 z-10">
+                      {searchResults.length > 0
+                        ? "Kết quả tìm kiếm"
+                        : "Thành viên vừa thêm gần đây"}
+                    </div>
+                    {(searchResults.length > 0
+                      ? searchResults
+                      : recentMembers
+                    ).map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedTargetId(p.id);
+                          setSearchTerm(p.full_name);
+                          setSearchResults([]);
+                        }}
+                        className="px-3 py-2 hover:bg-amber-50 text-sm flex items-center justify-between border-b border-stone-100 last:border-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex items-center justify-center text-[8px] font-bold size-3 rounded-full text-white shrink-0
+                               ${p.gender === "male"
+                                ? "bg-sky-500"
+                                : p.gender === "female"
+                                  ? "bg-rose-500"
+                                  : "bg-stone-400"
+                              }`}
+                          >
+                            {p.gender === "male"
+                              ? "♂"
+                              : p.gender === "female"
+                                ? "♀"
+                                : "?"}
+                          </span>
+                          <span className="font-medium text-stone-800">
+                            {p.full_name}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-stone-400">
+                          {formatDisplayDate(
+                            p.birth_year,
+                            p.birth_month,
+                            p.birth_day,
+                          )}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                  {(searchResults.length > 0
-                    ? searchResults
-                    : recentMembers
-                  ).map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedTargetId(p.id);
-                        setSearchTerm(p.full_name);
-                        setSearchResults([]);
-                      }}
-                      className="px-3 py-2 hover:bg-amber-50 text-sm flex items-center justify-between border-b border-stone-100 last:border-0"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`flex items-center justify-center text-[8px] font-bold size-3 rounded-full text-white shrink-0
-                               ${
-                                 p.gender === "male"
-                                   ? "bg-sky-500"
-                                   : p.gender === "female"
-                                     ? "bg-rose-500"
-                                     : "bg-stone-400"
-                               }`}
-                        >
-                          {p.gender === "male"
-                            ? "♂"
-                            : p.gender === "female"
-                              ? "♀"
-                              : "?"}
-                        </span>
-                        <span className="font-medium text-stone-800">
-                          {p.full_name}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-stone-400">
-                        {formatDisplayDate(
-                          p.birth_year,
-                          p.birth_month,
-                          p.birth_day,
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                )}
               {selectedTargetId && (
                 <p className="text-xs text-green-600 mt-1">
                   Đã chọn: {searchTerm}

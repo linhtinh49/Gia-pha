@@ -62,14 +62,14 @@ async function verifyAdmin() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, family_id")
     .eq("id", user.id)
     .single();
 
   if (profile?.role !== "admin")
     throw new Error("Từ chối truy cập. Chỉ admin mới có quyền này.");
 
-  return supabase;
+  return { supabase, familyId: profile.family_id };
 }
 
 // Các field được phép insert vào bảng persons (loại bỏ created_at/updated_at)
@@ -108,7 +108,7 @@ function sanitizeRelationship(
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 export async function exportData(): Promise<BackupPayload> {
-  const supabase = await verifyAdmin();
+  const { supabase } = await verifyAdmin();
 
   const { data: persons, error: personsError } = await supabase
     .from("persons")
@@ -144,11 +144,11 @@ export async function importData(
   importPayload:
     | BackupPayload
     | {
-        persons: PersonExport[];
-        relationships: Relationship[];
-      },
+      persons: PersonExport[];
+      relationships: Relationship[];
+    },
 ) {
-  const supabase = await verifyAdmin();
+  const { supabase, familyId } = await verifyAdmin();
 
   if (!importPayload?.persons || !importPayload?.relationships) {
     throw new Error("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại file JSON.");
@@ -178,7 +178,7 @@ export async function importData(
 
   // 3. Insert persons (sanitized — chỉ giữ các field schema hiện tại)
   const CHUNK = 200;
-  const persons = importPayload.persons.map(sanitizePerson);
+  const persons = importPayload.persons.map((p) => ({ ...sanitizePerson(p), family_id: familyId || null }));
 
   for (let i = 0; i < persons.length; i += CHUNK) {
     const chunk = persons.slice(i, i + CHUNK);
@@ -190,7 +190,7 @@ export async function importData(
   }
 
   // 4. Insert relationships (stripped of id/created_at to avoid conflicts)
-  const relationships = importPayload.relationships.map(sanitizeRelationship);
+  const relationships = importPayload.relationships.map((r) => ({ ...sanitizeRelationship(r), family_id: familyId || null }));
 
   for (let i = 0; i < relationships.length; i += CHUNK) {
     const chunk = relationships.slice(i, i + CHUNK);

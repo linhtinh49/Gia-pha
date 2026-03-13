@@ -18,11 +18,12 @@ export default async function NewMemberPage() {
   // Check if user is admin
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, family_id")
     .eq("id", user.id)
     .single();
 
   const isAdmin = profile?.role === "admin";
+  const familyId = profile?.family_id;
 
   return (
     <div className="flex-1 w-full relative flex flex-col pb-8">
@@ -43,7 +44,7 @@ export default async function NewMemberPage() {
       </div>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 relative z-10 w-full flex-1">
-        <MemberForm isAdmin={isAdmin} />
+        <MemberForm isAdmin={isAdmin} familyId={familyId} />
       </main>
     </div>
   );

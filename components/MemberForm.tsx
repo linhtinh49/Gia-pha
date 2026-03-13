@@ -26,6 +26,7 @@ interface MemberFormProps {
   onSuccess?: (personId: string) => void;
   /** Called when user clicks Cancel. Overrides default router.back(). */
   onCancel?: () => void;
+  familyId?: string | null;
 }
 
 export default function MemberForm({
@@ -34,6 +35,7 @@ export default function MemberForm({
   isAdmin = false,
   onSuccess,
   onCancel,
+  familyId,
 }: MemberFormProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -175,6 +177,7 @@ export default function MemberForm({
         birth_order: birthOrder === "" ? null : Number(birthOrder),
         avatar_url: finalAvatarUrl || null,
         note: note || null,
+        family_id: familyId || null,
       };
 
       let personId = initialData?.id;

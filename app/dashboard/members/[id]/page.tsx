@@ -25,7 +25,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
   // Check role
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, family_id")
     .eq("id", user.id)
     .single();
 
@@ -88,6 +88,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
             person={person}
             privateData={privateData}
             isAdmin={isAdmin}
+            familyId={profile?.family_id}
           />
         </div>
       </main>

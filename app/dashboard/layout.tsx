@@ -1,5 +1,6 @@
 import config from "@/app/config";
 import DashboardHeader from "@/components/DashboardHeader";
+import FamilySetup from "@/components/FamilySetup";
 import Footer from "@/components/Footer";
 import LogoutButton from "@/components/LogoutButton";
 import { createClient } from "@/utils/supabase/server";
@@ -26,11 +27,36 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_active, role")
+    .select("is_active, role, family_id")
     .eq("id", user.id)
     .single();
 
   const isAdmin = profile?.role === "admin";
+
+  if (!profile?.family_id) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200 shadow-sm transition-all duration-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="group flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-800 group-hover:text-amber-700 transition-colors">
+                  {config.siteName}
+                </h1>
+              </Link>
+            </div>
+            <div className="w-32">
+              <LogoutButton />
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 flex flex-col p-4 w-full">
+          <FamilySetup />
+        </main>
+        <Footer className="mt-auto bg-white border-t border-stone-200" />
+      </div>
+    );
+  }
 
   if (!profile?.is_active) {
     return (

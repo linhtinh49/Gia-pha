@@ -52,7 +52,14 @@ export async function adminCreateUser(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { error } = await supabase.rpc("admin_create_user", {
+  const adminUser = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("family_id")
+    .eq("id", adminUser.data.user?.id)
+    .single();
+
+  const { data: newUserId, error } = await supabase.rpc("admin_create_user", {
     new_email: email,
     new_password: password,
     new_role: role,
@@ -62,6 +69,13 @@ export async function adminCreateUser(formData: FormData) {
   if (error) {
     console.error("Failed to create user:", error);
     throw new Error(error.message);
+  }
+
+  if (newUserId && profile?.family_id) {
+    await supabase
+      .from("profiles")
+      .update({ family_id: profile.family_id })
+      .eq("id", newUserId);
   }
 
   revalidatePath("/dashboard/users");

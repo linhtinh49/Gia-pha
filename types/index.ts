@@ -5,9 +5,18 @@ export type RelationshipType =
   | "adopted_child";
 export type UserRole = "admin" | "member";
 
+export interface Family {
+  id: string;
+  name: string;
+  join_code: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   role: UserRole;
+  family_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +42,7 @@ export interface Person {
   death_day: number | null;
   avatar_url: string | null;
   note: string | null;
+  family_id?: string; // UUID from families table
   created_at: string;
   updated_at: string;
 
@@ -54,6 +64,7 @@ export interface Relationship {
   person_a: string; // UUID
   person_b: string; // UUID
   note?: string | null;
+  family_id?: string; // UUID from families table
   created_at: string;
   updated_at: string;
 }
