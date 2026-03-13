@@ -40,28 +40,15 @@ export async function createFamily(familyName: string) {
             throw new Error("Không thể tạo mã duy nhất. Vui lòng thử lại.");
         }
 
-        // 1. Create family
-        const { data: familyData, error: familyError } = await supabase
-            .from("families")
-            .insert([{ name: familyName, join_code: code }])
-            .select();
+        // 1. Create family and link admin atomically using RPC
+        const { data: family, error: rpcError } = await supabase.rpc("create_family_and_link_admin", {
+            new_family_name: familyName,
+            new_join_code: code,
+        });
 
-        if (familyError || !familyData || familyData.length === 0) {
-            console.error("Error creating family:", familyError);
+        if (rpcError || !family) {
+            console.error("Error creating family via RPC:", rpcError);
             throw new Error("Có lỗi xảy ra khi tạo Gia Phả. Vui lòng thử lại.");
-        }
-
-        const family = familyData[0];
-
-        // 2. Update user profile to link to family and become admin
-        const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ family_id: family.id, role: "admin" })
-            .eq("id", user.id);
-
-        if (profileError) {
-            console.error("Error linking profile to family:", profileError);
-            throw new Error("Không thể liên kết tài khoản với Gia Phả.");
         }
 
         return { success: true, family };
