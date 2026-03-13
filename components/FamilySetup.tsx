@@ -2,9 +2,11 @@
 
 import { createFamily, joinFamily } from "@/app/actions/family";
 import { Loader2, Plus, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function FamilySetup() {
+    const router = useRouter();
     const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
     const [familyName, setFamilyName] = useState("");
     const [joinCode, setJoinCode] = useState("");
@@ -19,7 +21,7 @@ export default function FamilySetup() {
         try {
             const res = await createFamily(familyName.trim());
             if (res.success) {
-                window.location.reload(); // Refresh to catch new profile
+                router.refresh();
             }
         } catch (err: any) {
             setError(err.message || "Failed to create family.");
@@ -35,7 +37,7 @@ export default function FamilySetup() {
         try {
             const res = await joinFamily(joinCode.trim());
             if (res.success) {
-                window.location.reload();
+                router.refresh();
             }
         } catch (err: any) {
             setError(err.message || "Failed to join family.");
