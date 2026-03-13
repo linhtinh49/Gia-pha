@@ -6,12 +6,16 @@ import React from "react";
 interface DashboardHeaderProps {
   isAdmin: boolean;
   userEmail?: string;
+  familyName?: string;
+  joinCode?: string;
   children?: React.ReactNode;
 }
 
 export default function DashboardHeader({
   isAdmin,
   userEmail,
+  familyName,
+  joinCode,
   children,
 }: DashboardHeaderProps) {
   return (
@@ -20,9 +24,17 @@ export default function DashboardHeader({
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="group flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-800 group-hover:text-amber-700 transition-colors">
-              {config.siteName}
+              {familyName || config.siteName}
             </h1>
           </Link>
+          {joinCode && (
+            <div className="hidden sm:flex items-center bg-stone-100 rounded-md px-3 py-1 text-sm border border-stone-200">
+              <span className="text-stone-500 mr-2">Mã tham gia:</span>
+              <span className="font-mono font-bold text-amber-700 tracking-wider">
+                {joinCode}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {children}

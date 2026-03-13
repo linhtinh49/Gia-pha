@@ -115,9 +115,30 @@ export default async function DashboardLayout({
     );
   }
 
+  let familyName: string | undefined;
+  let joinCode: string | undefined;
+
+  if (profile.family_id) {
+    const { data: family } = await supabase
+      .from("families")
+      .select("name, join_code")
+      .eq("id", profile.family_id)
+      .single();
+
+    if (family) {
+      familyName = family.name;
+      joinCode = family.join_code;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
-      <DashboardHeader isAdmin={isAdmin} userEmail={user.email} />
+      <DashboardHeader
+        isAdmin={isAdmin}
+        userEmail={user.email}
+        familyName={familyName}
+        joinCode={joinCode}
+      />
       {children}
       <Footer
         className="mt-auto bg-white border-t border-stone-200"
