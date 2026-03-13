@@ -25,11 +25,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("is_active, role, family_id")
     .eq("id", user.id)
     .single();
+
+  if (profileError) {
+    console.error("DashboardLayout profile error:", profileError);
+  }
 
   const isAdmin = profile?.role === "admin";
 
