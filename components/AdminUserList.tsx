@@ -4,6 +4,7 @@ import {
   adminCreateUser,
   changeUserRole,
   deleteUser,
+  toggleUserEditPermission,
   toggleUserStatus,
 } from "@/app/actions/user";
 import config from "@/app/config";
@@ -103,6 +104,29 @@ export default function AdminUserList({
     }
   };
 
+  const handleEditPermissionChange = async (userId: string, newPermission: boolean) => {
+    if (isDemo) {
+      showNotification(
+        "Đây là tài khoản demo cho mọi người sử dụng, vui lòng không thay đổi thông tin này.",
+        "info",
+      );
+      return;
+    }
+    try {
+      setLoadingId(userId);
+      await toggleUserEditPermission(userId, newPermission);
+      setUsers(
+        users.map((u) => (u.id === userId ? { ...u, can_edit_tree: newPermission } : u)),
+      );
+      showNotification(newPermission ? "Đã cấp quyền sửa Gia phả." : "Đã thu hồi quyền sửa Gia phả.", "success");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Lỗi không xác định khi đổi quyền sửa";
+      showNotification(msg, "error");
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   const handleDelete = async (userId: string) => {
     if (isDemo) {
       showNotification(
@@ -172,13 +196,12 @@ export default function AdminUserList({
             initial={{ opacity: 0, y: -20, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -20, x: "-50%" }}
-            className={`fixed top-1/2 left-1/2 z-100 px-6 py-3 rounded-xl shadow-lg border backdrop-blur-md flex items-center gap-3 min-w-[320px] max-w-[90vw] ${
-              notification.type === "success"
-                ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
-                : notification.type === "error"
-                  ? "bg-red-50/90 border-red-200 text-red-800"
-                  : "bg-amber-50/90 border-amber-200 text-amber-800"
-            }`}
+            className={`fixed top-1/2 left-1/2 z-100 px-6 py-3 rounded-xl shadow-lg border backdrop-blur-md flex items-center gap-3 min-w-[320px] max-w-[90vw] ${notification.type === "success"
+              ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+              : notification.type === "error"
+                ? "bg-red-50/90 border-red-200 text-red-800"
+                : "bg-amber-50/90 border-amber-200 text-amber-800"
+              }`}
           >
             {notification.type === "success" && (
               <svg
@@ -266,6 +289,9 @@ export default function AdminUserList({
                 <th className="px-6 py-4 text-stone-500 font-semibold text-xs">
                   Trạng thái
                 </th>
+                <th className="px-6 py-4 text-stone-500 font-semibold text-xs text-center">
+                  Sửa Gia Phả
+                </th>
                 <th className="px-6 py-4 text-stone-500 font-semibold text-xs">
                   Ngày tạo
                 </th>
@@ -285,25 +311,39 @@ export default function AdminUserList({
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                        user.role === "admin"
-                          ? "bg-amber-100 text-amber-800 border border-amber-200"
-                          : "bg-stone-100 text-stone-600 border border-stone-200"
-                      }`}
+                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${user.role === "admin"
+                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                        : "bg-stone-100 text-stone-600 border border-stone-200"
+                        }`}
                     >
                       {user.role}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                        user.is_active
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : "bg-red-100 text-red-800 border border-red-200"
-                      }`}
+                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${user.is_active
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-red-100 text-red-800 border border-red-200"
+                        }`}
                     >
                       {user.is_active ? "Đã duyệt" : "Chờ duyệt"}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {user.role === "admin" ? (
+                      <span className="text-stone-400 text-xs italic">Mặc định</span>
+                    ) : (
+                      <button
+                        disabled={loadingId === user.id}
+                        onClick={() => handleEditPermissionChange(user.id, !user.can_edit_tree)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors duration-200 ease-in-out disabled:opacity-50 ${user.can_edit_tree ? "bg-amber-600" : "bg-stone-200"}`}
+                        role="switch"
+                        aria-checked={user.can_edit_tree}
+                      >
+                        <span className="sr-only">Bật quyền sửa gia phả</span>
+                        <span aria-hidden="true" className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${user.can_edit_tree ? "translate-x-2" : "-translate-x-2"}`} />
+                      </button>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-stone-500">
                     {new Date(user.created_at).toLocaleDateString("vi-VN")}

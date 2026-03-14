@@ -18,6 +18,7 @@ export interface Profile {
   role: UserRole;
   family_id: string | null;
   is_active: boolean;
+  can_edit_tree: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -27,6 +28,7 @@ export interface AdminUserData {
   email: string;
   role: UserRole;
   is_active: boolean;
+  can_edit_tree: boolean;
   created_at: string;
 }
 

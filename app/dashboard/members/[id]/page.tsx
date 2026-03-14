@@ -25,11 +25,12 @@ export default async function MemberDetailPage({ params }: PageProps) {
   // Check role
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, family_id")
+    .select("role, family_id, can_edit_tree")
     .eq("id", user.id)
     .single();
 
   const isAdmin = profile?.role === "admin";
+  const canEditTree = profile?.can_edit_tree || false;
 
   // Fetch Person Public Data
   const { data: person, error } = await supabase
@@ -69,7 +70,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
           </span>
           Quay lại
         </Link>
-        {isAdmin && (
+        {(isAdmin || canEditTree) && (
           <div className="flex items-center gap-2.5">
             <Link
               href={`/dashboard/members/${id}/edit`}
@@ -88,6 +89,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
             person={person}
             privateData={privateData}
             isAdmin={isAdmin}
+            canEditTree={canEditTree}
             familyId={profile?.family_id}
           />
         </div>

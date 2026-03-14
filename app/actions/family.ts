@@ -114,3 +114,25 @@ export async function getMyFamilyInfo() {
 
     return family;
 }
+
+export async function updateFamilyName(newName: string) {
+    try {
+        const cookieStore = await cookies();
+        const supabase = createClient(cookieStore);
+
+        const { error } = await supabase.rpc("update_family_name", {
+            new_family_name: newName,
+        });
+
+        if (error) {
+            console.error("Failed to update family name:", error);
+            throw new Error(error.message);
+        }
+
+        revalidatePath("/dashboard", "layout");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Update Family Name Action Error:", error);
+        return { success: false, error: error.message || "Lỗi máy chủ không xác định." };
+    }
+}

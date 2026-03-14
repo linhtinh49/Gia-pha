@@ -98,3 +98,20 @@ export async function toggleUserStatus(userId: string, newStatus: boolean) {
   revalidatePath("/dashboard/users");
   return { success: true };
 }
+
+export async function toggleUserEditPermission(userId: string, newPermission: boolean) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { error } = await supabase.rpc("set_user_edit_permission", {
+    target_user_id: userId,
+    new_permission: newPermission,
+  });
+
+  if (error) {
+    console.error("Failed to change user edit permission:", error);
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard/users");
+  return { success: true };
+}

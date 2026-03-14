@@ -27,7 +27,7 @@ export default async function DashboardLayout({
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_active, role, family_id")
+    .select("is_active, role, family_id, can_edit_tree")
     .eq("id", user.id)
     .single();
 
