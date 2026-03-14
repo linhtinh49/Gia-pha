@@ -8,12 +8,15 @@ import {
   Database,
   GitMerge,
   Info,
+  LogOut,
   Network,
   UserCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
+import { leaveFamily } from "@/app/actions/family";
 
 interface HeaderMenuProps {
   isAdmin: boolean;
@@ -22,7 +25,32 @@ interface HeaderMenuProps {
 
 export default function HeaderMenu({ isAdmin, userEmail }: HeaderMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const handleLeaveFamily = async () => {
+    if (!confirm("Bạn có chắc chắn muốn rời khỏi Gia phả này không? Bạn sẽ phải xin lại mã tham gia để có thể truy cập lại.")) {
+      return;
+    }
+
+    setIsLeaving(true);
+    setIsOpen(false);
+
+    try {
+      const res = await leaveFamily();
+      if (res.success) {
+        // Force hard reload so layout fetches new profile and drops to onboarding
+        window.location.href = "/dashboard";
+      } else {
+        alert(res.error || "Có lỗi xảy ra khi rời gia phả.");
+        setIsLeaving(false);
+      }
+    } catch (e: any) {
+      alert("Lỗi máy chủ không xác định.");
+      setIsLeaving(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -124,6 +152,18 @@ export default function HeaderMenu({ isAdmin, userEmail }: HeaderMenuProps) {
                 <Info className="size-4" />
                 Giới thiệu & Liên hệ
               </Link>
+
+              {!isAdmin && (
+                <button
+                  onClick={handleLeaveFamily}
+                  disabled={isLeaving}
+                  className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  <LogOut className="size-4" />
+                  {isLeaving ? "Đang rời khỏi..." : "Rời khỏi Gia phả"}
+                </button>
+              )}
+
               <LogoutButton />
             </div>
           </motion.div>

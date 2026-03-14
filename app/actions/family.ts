@@ -136,3 +136,27 @@ export async function updateFamilyName(newName: string) {
         return { success: false, error: error.message || "Lỗi máy chủ không xác định." };
     }
 }
+
+export async function leaveFamily() {
+    try {
+        const cookieStore = await cookies();
+        const supabase = createClient(cookieStore);
+
+        const { error } = await supabase.rpc("leave_family");
+
+        if (error) {
+            console.error("Failed to leave family:", error);
+            // Translate the known RPC error
+            if (error.message.includes("Admin không thể rời khỏi gia phả")) {
+                return { success: false, error: "Quản trị viên (Admin) không thể rời khỏi gia phả. Tính năng chuyển quyền hoặc xoá gia phả sẽ được phát triển sau." };
+            }
+            throw new Error(error.message);
+        }
+
+        revalidatePath("/dashboard", "layout");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Leave Family Action Error:", error);
+        return { success: false, error: error.message || "Lỗi máy chủ không xác định." };
+    }
+}
