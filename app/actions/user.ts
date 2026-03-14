@@ -115,3 +115,20 @@ export async function toggleUserEditPermission(userId: string, newPermission: bo
   revalidatePath("/dashboard/settings");
   return { success: true };
 }
+
+export async function debugDump() {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: userAuth } = await supabase.auth.getUser();
+  const { data: profiles, error: pErr } = await supabase.from('profiles').select('*');
+  const { data: families, error: fErr } = await supabase.from('families').select('*');
+
+  console.log("----- DEBUG DUMP -----");
+  console.log("Auth User:", userAuth.user?.id);
+  console.log("Profiles:", profiles);
+  console.log("Families:", families);
+  console.log("----------------------");
+
+  return { profiles, families };
+}

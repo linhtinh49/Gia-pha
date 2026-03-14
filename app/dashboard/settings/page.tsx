@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import FamilyNameEditor from "@/components/FamilyNameEditor";
+import { debugDump } from "@/app/actions/user";
 
 export default async function SettingsPage() {
     const cookieStore = await cookies();
@@ -40,6 +41,9 @@ export default async function SettingsPage() {
 
     // Fetch users via RPC
     const { data: users, error } = await supabase.rpc("get_admin_users");
+
+    // DEBUG DB
+    await debugDump();
 
     if (error) {
         console.error("Error fetching users:", error);

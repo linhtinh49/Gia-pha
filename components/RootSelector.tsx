@@ -87,6 +87,10 @@ export default function RootSelector({
               ) : (
                 <DefaultAvatar gender={currentRootPerson.gender} />
               )
+            ) : currentRootId === "all" ? (
+              <span className="text-stone-500">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M4.5 3.75a3 3 0 00-3 3v.75h21v-.75a3 3 0 00-3-3h-15z" /><path fillRule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 003 3h15a3 3 0 003-3v-7.5zm-18 3.75a.75.75 0 01.75-.75h6a.75.75 0 010 1.5h-6a.75.75 0 01-.75-.75zm.75 2.25a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" clipRule="evenodd" /></svg>
+              </span>
             ) : (
               "?"
             )}
@@ -109,7 +113,7 @@ export default function RootSelector({
             Gốc hiển thị
           </p>
           <p className="truncate text-stone-800 font-semibold select-none leading-tight">
-            {currentRootPerson ? currentRootPerson.full_name : "Chọn người..."}
+            {currentRootId === "all" ? "Tổng quát (Tất cả)" : currentRootPerson ? currentRootPerson.full_name : "Chọn người..."}
           </p>
         </div>
 
@@ -146,83 +150,106 @@ export default function RootSelector({
               </div>
             </div>
             <div className="overflow-y-auto flex-1 p-1.5 custom-scrollbar">
-              {filteredPersons.length > 0 ? (
-                <div className="space-y-0.5">
-                  {filteredPersons.map((person) => {
-                    const isSelected = person.id === currentRootId;
-                    return (
-                      <button
-                        key={person.id}
-                        onClick={() => handleSelect(person.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-200 group/item
-                          ${
-                            isSelected
+              <div className="space-y-0.5">
+                {/* Always show "Tổng quát" at the top */}
+                <button
+                  onClick={() => handleSelect("all")}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-200 group/item
+                    ${currentRootId === "all"
+                      ? "bg-amber-50 text-amber-900 border border-amber-200/50 shadow-sm"
+                      : "text-stone-700 hover:bg-stone-100/80 border border-transparent"
+                    }`}
+                >
+                  <div className="relative shrink-0">
+                    <div className="size-8 rounded-full flex items-center justify-center bg-stone-100 text-stone-500 overflow-hidden ring-1 ring-white shadow-xs">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M4.5 3.75a3 3 0 00-3 3v.75h21v-.75a3 3 0 00-3-3h-15z" /><path fillRule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 003 3h15a3 3 0 003-3v-7.5zm-18 3.75a.75.75 0 01.75-.75h6a.75.75 0 010 1.5h-6a.75.75 0 01-.75-.75zm.75 2.25a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" clipRule="evenodd" /></svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className={`truncate ${currentRootId === "all" ? "font-bold" : "font-medium group-hover/item:text-stone-900"}`}>
+                      Tổng quát (Tất cả)
+                    </p>
+                  </div>
+                  {currentRootId === "all" && <Check className="size-4 text-amber-600 shrink-0" />}
+                </button>
+
+                {filteredPersons.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {filteredPersons.map((person) => {
+                      const isSelected = person.id === currentRootId;
+                      return (
+                        <button
+                          key={person.id}
+                          onClick={() => handleSelect(person.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-200 group/item
+                          ${isSelected
                               ? "bg-amber-50 text-amber-900 border border-amber-200/50 shadow-sm"
                               : "text-stone-700 hover:bg-stone-100/80 border border-transparent"
-                          }`}
-                      >
-                        <div className="relative shrink-0">
-                          <div
-                            className={`size-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden ring-1 ring-white shadow-xs
+                            }`}
+                        >
+                          <div className="relative shrink-0">
+                            <div
+                              className={`size-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden ring-1 ring-white shadow-xs
                             ${getAvatarBg(person.gender)}`}
-                          >
-                            {person.avatar_url ? (
-                              <Image
-                                unoptimized
-                                src={person.avatar_url}
-                                alt={person.full_name}
-                                width={32}
-                                height={32}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <DefaultAvatar gender={person.gender} />
+                            >
+                              {person.avatar_url ? (
+                                <Image
+                                  unoptimized
+                                  src={person.avatar_url}
+                                  alt={person.full_name}
+                                  width={32}
+                                  height={32}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <DefaultAvatar gender={person.gender} />
+                              )}
+                            </div>
+                            <div
+                              className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-1 ring-white shadow-xs flex items-center justify-center ${getGenderStyle(person.gender)}`}
+                            >
+                              {person.gender === "male" ? (
+                                <MaleIcon className="size-2.5" />
+                              ) : person.gender === "female" ? (
+                                <FemaleIcon className="size-2.5" />
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0 text-left">
+                            <p
+                              className={`truncate ${isSelected ? "font-bold" : "font-medium group-hover/item:text-stone-900"}`}
+                            >
+                              {person.full_name}
+                            </p>
+                            {person.generation != null && (
+                              <p className="text-[10px] text-stone-400 font-medium">
+                                Đời thứ {person.generation}
+                              </p>
                             )}
                           </div>
-                          <div
-                            className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-1 ring-white shadow-xs flex items-center justify-center ${getGenderStyle(person.gender)}`}
-                          >
-                            {person.gender === "male" ? (
-                              <MaleIcon className="size-2.5" />
-                            ) : person.gender === "female" ? (
-                              <FemaleIcon className="size-2.5" />
-                            ) : null}
-                          </div>
-                        </div>
 
-                        <div className="flex-1 min-w-0 text-left">
-                          <p
-                            className={`truncate ${isSelected ? "font-bold" : "font-medium group-hover/item:text-stone-900"}`}
-                          >
-                            {person.full_name}
-                          </p>
-                          {person.generation != null && (
-                            <p className="text-[10px] text-stone-400 font-medium">
-                              Đời thứ {person.generation}
-                            </p>
+                          {isSelected && (
+                            <Check className="size-4 text-amber-600 shrink-0" />
                           )}
-                        </div>
-
-                        {isSelected && (
-                          <Check className="size-4 text-amber-600 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
-                  <div className="size-10 rounded-full bg-stone-100 flex items-center justify-center mb-1">
-                    <Search className="size-5 text-stone-300" />
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="text-sm font-medium text-stone-600">
-                    Không tìm thấy kết quả
+                ) : (
+                  <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
+                    <div className="size-10 rounded-full bg-stone-100 flex items-center justify-center mb-1">
+                      <Search className="size-5 text-stone-300" />
+                    </div>
+                    <div className="text-sm font-medium text-stone-600">
+                      Không tìm thấy thành viên
+                    </div>
+                    <div className="text-xs text-stone-400">
+                      Thử tìm với tên khác
+                    </div>
                   </div>
-                  <div className="text-xs text-stone-400">
-                    Thử tìm với tên khác
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </motion.div>
         )}

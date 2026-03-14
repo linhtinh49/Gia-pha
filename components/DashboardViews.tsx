@@ -36,8 +36,15 @@ export default function DashboardViews({
 
     let finalRootId = rootId;
 
-    // If no rootId is provided, fallback to the earliest created person
-    if (!finalRootId || !pMap.has(finalRootId)) {
+    // Track which people have any relationships (to filter out completely unlinked isolated nodes in "all" view)
+    const hasRelationship = new Set<string>();
+    relationships.forEach(r => {
+      hasRelationship.add(r.person_a);
+      hasRelationship.add(r.person_b);
+    });
+
+    // If no rootId is provided, fallback to the earliest created person (or "all")
+    if (!finalRootId || (!pMap.has(finalRootId) && finalRootId !== "all")) {
       const rootsFallback = persons.filter((p) => !childIds.has(p.id));
       if (rootsFallback.length > 0) {
         finalRootId = rootsFallback[0].id;
@@ -47,7 +54,14 @@ export default function DashboardViews({
     }
 
     let calculatedRoots: Person[] = [];
-    if (finalRootId && pMap.has(finalRootId)) {
+    if (finalRootId === "all") {
+      // "Tổng quát" mode: show all branches that are not children of anyone else, but HAVE AT LEAST ONE CONNECTION
+      calculatedRoots = persons.filter((p) => !childIds.has(p.id) && hasRelationship.has(p.id));
+      if (calculatedRoots.length === 0 && persons.length > 0) {
+        // Fallback: If absolutely everyone is unlinked, just show everyone
+        calculatedRoots = persons;
+      }
+    } else if (finalRootId && pMap.has(finalRootId)) {
       calculatedRoots = [pMap.get(finalRootId)!];
     }
 
