@@ -18,7 +18,7 @@ export async function changeUserRole(userId: string, newRole: UserRole) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }
 
@@ -34,7 +34,7 @@ export async function deleteUser(userId: string) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }
 
@@ -78,7 +78,7 @@ export async function adminCreateUser(formData: FormData) {
       .eq("id", newUserId);
   }
 
-  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }
 
@@ -95,7 +95,7 @@ export async function toggleUserStatus(userId: string, newStatus: boolean) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }
 
@@ -112,6 +112,6 @@ export async function toggleUserEditPermission(userId: string, newPermission: bo
     throw new Error(error.message);
   }
 
-  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }

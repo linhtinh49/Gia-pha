@@ -23,6 +23,7 @@ export default function MemberDetailModal() {
 
   const [authChecked, setAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canEditTree, setCanEditTree] = useState(false);
 
   const [person, setPerson] = useState<Person | null>(null);
   const [privateData, setPrivateData] = useState<Record<
@@ -42,6 +43,7 @@ export default function MemberDetailModal() {
       try {
         // 1. Check auth / role
         let currentIsAdmin = isAdmin;
+        let currentCanEditTree = canEditTree;
         if (!authChecked) {
           const {
             data: { user },
@@ -49,11 +51,13 @@ export default function MemberDetailModal() {
           if (user) {
             const { data: profile } = await supabase
               .from("profiles")
-              .select("role")
+              .select("role, can_edit_tree")
               .eq("id", user.id)
               .single();
             currentIsAdmin = profile?.role === "admin";
+            currentCanEditTree = profile?.can_edit_tree === true;
             setIsAdmin(currentIsAdmin);
+            setCanEditTree(currentCanEditTree);
           }
           setAuthChecked(true);
         }
@@ -173,7 +177,7 @@ export default function MemberDetailModal() {
                   <span className="hidden sm:inline">Xem chi tiết</span>
                 </button>
               ) : (
-                isAdmin &&
+                (isAdmin || canEditTree) &&
                 person && (
                   <>
                     <Link
@@ -233,7 +237,7 @@ export default function MemberDetailModal() {
                     >[0]["initialData"]
                   }
                   isEditing={true}
-                  isAdmin={isAdmin}
+                  isAdmin={isAdmin || canEditTree}
                   onSuccess={handleEditSuccess}
                   onCancel={() => setIsEditing(false)}
                 />
@@ -245,6 +249,7 @@ export default function MemberDetailModal() {
                   person={person}
                   privateData={privateData}
                   isAdmin={isAdmin}
+                  canEditTree={canEditTree}
                 />
               </div>
             ) : null}
