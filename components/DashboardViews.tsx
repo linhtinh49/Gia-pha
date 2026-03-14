@@ -40,12 +40,21 @@ export default function DashboardViews({
     const hasRelationship = new Set<string>();
     const spouseBIds = new Set<string>(); // People added as "spouse" (person_b)
 
+    // Build undirected graph to find connected components
+    const adjacencyList = new Map<string, string[]>();
+    const addEdge = (u: string, v: string) => {
+      if (!adjacencyList.has(u)) adjacencyList.set(u, []);
+      if (!adjacencyList.has(v)) adjacencyList.set(v, []);
+      adjacencyList.get(u)!.push(v);
+      adjacencyList.get(v)!.push(u);
+    };
+
     relationships.forEach(r => {
       hasRelationship.add(r.person_a);
       hasRelationship.add(r.person_b);
+      addEdge(r.person_a, r.person_b);
+
       if (r.type === 'marriage') {
-        // Typically person_a is the bloodline member, person_b is the added spouse.
-        // We exclude person_b from being a root to avoid duplicate trees.
         spouseBIds.add(r.person_b);
       }
     });
@@ -62,8 +71,68 @@ export default function DashboardViews({
 
     let calculatedRoots: Person[] = [];
     if (finalRootId === "all") {
-      // "Tổng quát" mode: show all branches that are not children of anyone else, AND not added as a spouse, but HAVE AT LEAST ONE CONNECTION
-      calculatedRoots = persons.filter((p) => !childIds.has(p.id) && !spouseBIds.has(p.id) && hasRelationship.has(p.id));
+      // "Tổng quát" mode: Group all connected people into distinct families.
+      // Pick EXACTLY ONE person per connected component as the root,
+      // to avoid drawing overlapping trees for in-laws (e.g., both husband's dad and wife's mom as roots).
+
+      const visited = new Set<string>();
+      const components: string[][] = [];
+
+      // Only iterate over people who actually have relationships
+      persons.forEach(p => {
+        if (!visited.has(p.id) && hasRelationship.has(p.id)) {
+          const comp: string[] = [];
+          const stack = [p.id];
+          visited.add(p.id);
+
+          while (stack.length > 0) {
+            const current = stack.pop()!;
+            comp.push(current);
+            const neighbors = adjacencyList.get(current) || [];
+            for (const n of neighbors) {
+              if (!visited.has(n) && pMap.has(n)) {
+                visited.add(n);
+                stack.push(n);
+              }
+            }
+          }
+          if (comp.length > 0) {
+            components.push(comp);
+          }
+        }
+      });
+
+      // For each connected family component, select the "best" root.
+      // Best root: Person who is NOT a child of anyone, preferably NOT an added spouse, preferably Male (patriarch bias for standard trees)
+      components.forEach(comp => {
+        // Filter strictly to candidates who are NOT children in standard bloodlines
+        let candidates = comp.filter(id => !childIds.has(id));
+
+        // If everyone somehow is a child (circular/messy data), fallback to everyone in the component
+        if (candidates.length === 0) candidates = comp;
+
+        // Try to filter out added spouses (person_b in marriage) if we have other bloodline patriarchs
+        const nonSpouseCandidates = candidates.filter(id => !spouseBIds.has(id));
+        if (nonSpouseCandidates.length > 0) {
+          candidates = nonSpouseCandidates;
+        }
+
+        // Prefer males if available
+        const personCandidates = candidates.map(id => pMap.get(id)!).filter(Boolean);
+        const maleCandidates = personCandidates.filter(p => p.gender === 'male');
+
+        let chosenRoot: Person;
+        if (maleCandidates.length > 0) {
+          chosenRoot = maleCandidates[0];
+        } else if (personCandidates.length > 0) {
+          chosenRoot = personCandidates[0];
+        } else {
+          chosenRoot = pMap.get(comp[0])!;
+        }
+
+        calculatedRoots.push(chosenRoot);
+      });
+
       if (calculatedRoots.length === 0 && persons.length > 0) {
         // Fallback: If absolutely everyone is unlinked, just show everyone
         calculatedRoots = persons;
