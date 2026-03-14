@@ -38,14 +38,21 @@ export default function DashboardViews({
 
     // Track which people have any relationships (to filter out completely unlinked isolated nodes in "all" view)
     const hasRelationship = new Set<string>();
+    const spouseBIds = new Set<string>(); // People added as "spouse" (person_b)
+
     relationships.forEach(r => {
       hasRelationship.add(r.person_a);
       hasRelationship.add(r.person_b);
+      if (r.type === 'marriage') {
+        // Typically person_a is the bloodline member, person_b is the added spouse.
+        // We exclude person_b from being a root to avoid duplicate trees.
+        spouseBIds.add(r.person_b);
+      }
     });
 
     // If no rootId is provided, fallback to the earliest created person (or "all")
     if (!finalRootId || (!pMap.has(finalRootId) && finalRootId !== "all")) {
-      const rootsFallback = persons.filter((p) => !childIds.has(p.id));
+      const rootsFallback = persons.filter((p) => !childIds.has(p.id) && !spouseBIds.has(p.id));
       if (rootsFallback.length > 0) {
         finalRootId = rootsFallback[0].id;
       } else if (persons.length > 0) {
@@ -55,8 +62,8 @@ export default function DashboardViews({
 
     let calculatedRoots: Person[] = [];
     if (finalRootId === "all") {
-      // "Tổng quát" mode: show all branches that are not children of anyone else, but HAVE AT LEAST ONE CONNECTION
-      calculatedRoots = persons.filter((p) => !childIds.has(p.id) && hasRelationship.has(p.id));
+      // "Tổng quát" mode: show all branches that are not children of anyone else, AND not added as a spouse, but HAVE AT LEAST ONE CONNECTION
+      calculatedRoots = persons.filter((p) => !childIds.has(p.id) && !spouseBIds.has(p.id) && hasRelationship.has(p.id));
       if (calculatedRoots.length === 0 && persons.length > 0) {
         // Fallback: If absolutely everyone is unlinked, just show everyone
         calculatedRoots = persons;
