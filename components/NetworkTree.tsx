@@ -32,61 +32,175 @@ const CustomNode = ({ data }: any) => {
 
 const nodeTypes = { custom: CustomNode };
 
-const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
+const getLayoutedElements = (personsMap: Map<string, Person>, relationships: Relationship[], direction = 'TB') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: direction, align: 'UL', nodesep: 60, ranksep: 100, edgesep: 30 });
 
-  nodes.forEach((node) => {
+  const initialNodes = Array.from(personsMap.values()).map(person => ({
+    id: person.id,
+    type: 'custom',
+    data: { 
+      label: person.full_name,
+      style: {
+        background: person.gender === 'male' ? '#e0f2fe' : person.gender === 'female' ? '#ffe4e6' : '#f5f5f4',
+        border: '1px solid #d6d3d1',
+        borderRadius: '8px',
+        padding: '10px',
+        fontWeight: 'bold',
+        color: '#1c1917',
+        width: nodeWidth,
+        textAlign: 'center' as const
+      }
+    },
+    position: { x: 0, y: 0 },
+  }));
+
+  // Add logical nodes to Dagre
+  initialNodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
   });
 
-  edges.forEach((edge) => {
-    // Only pass biological relationships to Dagre to enforce vertical rank.
-    // Marriages are excluded from Dagre so spouses are placed at the same rank.
-    if (edge.type !== 'straight') {
-      dagreGraph.setEdge(edge.source, edge.target);
-    }
+  // Calculate distinct edge groups
+  const marriageEdges = relationships.filter(r => r.type === 'marriage' && personsMap.has(r.person_a) && personsMap.has(r.person_b));
+  const biologicalEdges = relationships.filter(r => r.type !== 'marriage' && personsMap.has(r.person_a) && personsMap.has(r.person_b));
+
+  // ONLY biological edges go to Dagre to enforce vertical hierarchy!
+  biologicalEdges.forEach((edge) => {
+    dagreGraph.setEdge(edge.person_a, edge.person_b);
   });
 
+  // Layout logically
   dagre.layout(dagreGraph);
 
-  const newNodes = nodes.map((node) => {
+  // Apply positions with layout fallback
+  const newNodes = initialNodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id) || { x: Math.random() * 200, y: Math.random() * 200 };
     const newNode = { ...node };
-
     newNode.position = {
       x: nodeWithPosition.x - nodeWidth / 2,
       y: nodeWithPosition.y - nodeHeight / 2,
     };
-
     return newNode;
   });
 
-  // Post-process to align spouses exactly and pull disconnected spouses together
-  edges.forEach((edge) => {
-    if (edge.type === 'straight') {
-      const srcNode = newNodes.find(n => n.id === edge.source);
-      const tgtNode = newNodes.find(n => n.id === edge.target);
-      if (srcNode && tgtNode) {
-        // Enforce same Y coordinate (take the maximum Y, pushing them down together)
-        const targetY = Math.max(srcNode.position.y || 0, tgtNode.position.y || 0);
-        srcNode.position.y = targetY;
-        tgtNode.position.y = targetY;
+  // Determine which marriages have which children to route lines from famNode.
+  const parentToMarriages = new Map<string, string[]>();
+  marriageEdges.forEach(m => {
+     if (!parentToMarriages.has(m.person_a)) parentToMarriages.set(m.person_a, []);
+     if (!parentToMarriages.has(m.person_b)) parentToMarriages.set(m.person_b, []);
+     parentToMarriages.get(m.person_a)!.push(m.id);
+     parentToMarriages.get(m.person_b)!.push(m.id);
+  });
 
-        // Ensure they are close horizontally if dagre placed them far apart
-        // Typically dagre nodesep is 60, nodeWidth is 180.
-        // We can optionally pull tgtNode next to srcNode if they are too far
-        const xDist = Math.abs(srcNode.position.x - tgtNode.position.x);
-        if (xDist > nodeWidth * 2) {
-           // Basic heuristic pulling:
-           tgtNode.position.x = srcNode.position.x + nodeWidth + 60;
-        }
+  const finalEdges: any[] = [];
+  const finalNodes = [...newNodes];
+
+  // Post-process to align spouses and insert fam invisible nodes
+  marriageEdges.forEach((edge) => {
+    const srcNode = finalNodes.find(n => n.id === edge.person_a);
+    const tgtNode = finalNodes.find(n => n.id === edge.person_b);
+    if (srcNode && tgtNode) {
+      // Pull onto the same rank (Y-plane)
+      const targetY = Math.max(srcNode.position.y, tgtNode.position.y);
+      srcNode.position.y = targetY;
+      tgtNode.position.y = targetY;
+
+      // Close horizontal gap if Dagre separated them too much
+      const x1 = srcNode.position.x;
+      const x2 = tgtNode.position.x;
+      if (Math.abs(x1 - x2) > nodeWidth * 1.5) {
+        tgtNode.position.x = x1 + nodeWidth + 60; // Standard spacing
       }
+
+      // Order left-to-right (Husband usually left, but we just use positions)
+      const leftNode = srcNode.position.x <= tgtNode.position.x ? srcNode : tgtNode;
+      const rightNode = leftNode === srcNode ? tgtNode : srcNode;
+
+      // 1. Create invisible Fam node precisely at the center between them
+      const famId = `fam_${edge.id}`;
+      finalNodes.push({
+        id: famId,
+        type: 'custom',
+        data: { label: '', style: { width: 1, height: 1, padding: 0, border: 'none', background: 'transparent' } },
+        position: {
+          x: leftNode.position.x + nodeWidth + ((rightNode.position.x - (leftNode.position.x + nodeWidth)) / 2),
+          y: targetY + (nodeHeight / 2),
+        }
+      });
+
+      // 2. Visual Edges: [Left Node] -> [Fam Node] -> [Right Node]
+      finalEdges.push({
+        id: `m_L_${edge.id}`,
+        source: leftNode.id,
+        target: famId,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'straight',
+        style: { stroke: '#1c1917', strokeWidth: 1.5 },
+      });
+      finalEdges.push({
+        id: `m_R_${edge.id}`,
+        source: famId,
+        target: rightNode.id,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'straight',
+        style: { stroke: '#1c1917', strokeWidth: 1.5 },
+      });
     }
   });
 
-  return { nodes: newNodes, edges };
+  // Calculate visual biological edges
+  const renderedChildToFam = new Set<string>();
+  biologicalEdges.forEach(c => {
+    const parentId = c.person_a;
+    const childId = c.person_b;
+    
+    // Check if this child connects to a family node instead of individual parent
+    let sharedMarriageId = null;
+    const marriageIdsForParent = parentToMarriages.get(parentId) || [];
+    for (const mId of marriageIdsForParent) {
+      const m = marriageEdges.find(ms => ms.id === mId);
+      if (!m) continue;
+      const otherSpouseId = m.person_a === parentId ? m.person_b : m.person_a;
+      
+      const isShared = biologicalEdges.some(ce => ce.person_a === otherSpouseId && ce.person_b === childId);
+      if (isShared) {
+        sharedMarriageId = m.id;
+        break;
+      }
+    }
+
+    if (sharedMarriageId) {
+      const edgeKey = `fam_${sharedMarriageId}_${childId}`;
+      if (!renderedChildToFam.has(edgeKey)) {
+        renderedChildToFam.add(edgeKey);
+        finalEdges.push({
+          id: `child_${edgeKey}`,
+          source: `fam_${sharedMarriageId}`,
+          target: childId,
+          sourceHandle: 'bottom',
+          targetHandle: 'top',
+          type: 'step', // 'step' draws orthogonal lines (down-across-down) standard for trees
+          style: { stroke: '#1c1917', strokeWidth: 1.5 },
+        });
+      }
+    } else {
+      // Single parent edge
+      finalEdges.push({
+        id: `child_${parentId}_${childId}`,
+        source: parentId,
+        target: childId,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'step',
+        style: { stroke: '#1c1917', strokeWidth: 1.5 },
+      });
+    }
+  });
+
+  return { nodes: finalNodes, edges: finalEdges };
 };
 
 export default function NetworkTree({
@@ -96,62 +210,9 @@ export default function NetworkTree({
   personsMap: Map<string, Person>;
   relationships: Relationship[];
 }) {
-  const initialNodes = useMemo(() => {
-    return Array.from(personsMap.values()).map(person => ({
-      id: person.id,
-      type: 'custom',
-      data: { 
-        label: person.full_name,
-        style: {
-          background: person.gender === 'male' ? '#e0f2fe' : person.gender === 'female' ? '#ffe4e6' : '#f5f5f4',
-          border: '1px solid #d6d3d1',
-          borderRadius: '8px',
-          padding: '10px',
-          fontWeight: 'bold',
-          color: '#1c1917',
-          width: nodeWidth,
-          textAlign: 'center' as const
-        }
-      },
-      position: { x: 0, y: 0 },
-    }));
-  }, [personsMap]);
-
-  const initialEdges = useMemo(() => {
-    return relationships
-      .filter(r => personsMap.has(r.person_a) && personsMap.has(r.person_b))
-      .map(r => {
-        if (r.type === 'marriage') {
-          return {
-            id: r.id,
-            source: r.person_a,
-            target: r.person_b,
-            sourceHandle: 'right', // line starts from right side of husband
-            targetHandle: 'left', // line ends at left side of wife
-            type: 'straight',
-            style: { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5' },
-            animated: true,
-            labelStyle: { fill: '#b45309', fontWeight: 700, fontSize: 10 },
-          };
-        } else {
-          return {
-            id: r.id,
-            source: r.person_a,
-            target: r.person_b,
-            type: 'smoothstep',
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#a8a29e',
-            },
-            style: { stroke: '#a8a29e', strokeWidth: 2 },
-          };
-        }
-      });
-  }, [relationships, personsMap]);
-
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => getLayoutedElements(initialNodes, initialEdges),
-    [initialNodes, initialEdges]
+    () => getLayoutedElements(personsMap, relationships),
+    [personsMap, relationships]
   );
 
   return (
