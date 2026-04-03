@@ -6,6 +6,7 @@ import DashboardMemberList from "@/components/DashboardMemberList";
 import ExportButton from "@/components/ExportButton";
 import FamilyTree from "@/components/FamilyTree";
 import MindmapTree from "@/components/MindmapTree";
+import NetworkTree from "@/components/NetworkTree";
 import RootSelector from "@/components/RootSelector";
 import { Person, Relationship } from "@/types";
 import { useMemo } from "react";
@@ -182,6 +183,12 @@ export default function DashboardViews({
               personsMap={personsMap}
               relationships={relationships}
               roots={roots}
+            />
+          )}
+          {currentView === "network" && (
+            <NetworkTree
+              personsMap={personsMap}
+              relationships={relationships}
             />
           )}
         </div>

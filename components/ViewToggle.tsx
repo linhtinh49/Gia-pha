@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { List, ListTree, Network } from "lucide-react";
 import { useDashboard } from "./DashboardContext";
 
-export type ViewMode = "list" | "tree" | "mindmap";
+export type ViewMode = "list" | "tree" | "mindmap" | "network";
 
 export default function ViewToggle() {
   const { view: currentView, setView } = useDashboard();
@@ -13,6 +13,7 @@ export default function ViewToggle() {
     { id: "list", label: "Danh sách", icon: <List className="size-4" /> },
     { id: "tree", label: "Sơ đồ cây", icon: <Network className="size-4" /> },
     { id: "mindmap", label: "Mindmap", icon: <ListTree className="size-4" /> },
+    { id: "network", label: "Đồ thị (mới)", icon: <Network className="size-4" /> },
   ] as const;
 
   return (
