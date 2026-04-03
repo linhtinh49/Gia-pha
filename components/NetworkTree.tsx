@@ -102,6 +102,9 @@ export default function NetworkTree({
 
   return (
     <div className="w-full h-full min-h-[70vh] bg-stone-50/50 rounded-2xl border border-stone-200 overflow-hidden relative shadow-inner">
+      <div className="absolute top-2 right-2 z-50 bg-black/80 text-white p-2 rounded text-xs font-mono">
+        DEBUG: personsMap={personsMap.size}, layoutedNodes={layoutedNodes.length}, nodes={nodes.length}, edges={edges.length}
+      </div>
       <ReactFlow
         nodes={nodes}
         edges={edges}
