@@ -21,11 +21,11 @@ const nodeHeight = 60;
 const CustomNode = ({ data }: any) => {
   return (
     <div style={data.style} className="relative group">
-      <Handle type="target" position={Position.Top} className="opacity-0 w-full" />
+      <Handle type="target" position={Position.Top} id="top" className="opacity-0 w-full" />
       <Handle type="source" position={Position.Right} id="right" className="opacity-0 h-full !right-0" />
       <Handle type="target" position={Position.Left} id="left" className="opacity-0 h-full !left-0" />
       {data.label}
-      <Handle type="source" position={Position.Bottom} className="opacity-0 w-full" />
+      <Handle type="source" position={Position.Bottom} id="bottom" className="opacity-0 w-full" />
     </div>
   );
 };
@@ -182,7 +182,7 @@ const getLayoutedElements = (personsMap: Map<string, Person>, relationships: Rel
           target: childId,
           sourceHandle: 'bottom',
           targetHandle: 'top',
-          type: 'step', // 'step' draws orthogonal lines (down-across-down) standard for trees
+          type: 'smoothstep', // 'smoothstep' draws orthogonal lines (down-across-down) standard for trees
           style: { stroke: '#1c1917', strokeWidth: 1.5 },
         });
       }
@@ -194,7 +194,7 @@ const getLayoutedElements = (personsMap: Map<string, Person>, relationships: Rel
         target: childId,
         sourceHandle: 'bottom',
         targetHandle: 'top',
-        type: 'step',
+        type: 'smoothstep',
         style: { stroke: '#1c1917', strokeWidth: 1.5 },
       });
     }
