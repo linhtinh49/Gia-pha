@@ -20,10 +20,12 @@ const nodeHeight = 60;
 
 const CustomNode = ({ data }: any) => {
   return (
-    <div style={data.style}>
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+    <div style={data.style} className="relative group">
+      <Handle type="target" position={Position.Top} className="opacity-0 w-full" />
+      <Handle type="source" position={Position.Right} id="right" className="opacity-0 h-full !right-0" />
+      <Handle type="target" position={Position.Left} id="left" className="opacity-0 h-full !left-0" />
       {data.label}
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} className="opacity-0 w-full" />
     </div>
   );
 };
@@ -40,18 +42,17 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   });
 
   edges.forEach((edge) => {
-    if (edge.type === 'straight') {
-      // For marriage, minlen 0 allows same rank, weight keeps them close
-      dagreGraph.setEdge(edge.source, edge.target, { minlen: 0, weight: 10 });
-    } else {
-      dagreGraph.setEdge(edge.source, edge.target, { minlen: 1, weight: 1 });
+    // Only pass biological relationships to Dagre to enforce vertical rank.
+    // Marriages are excluded from Dagre so spouses are placed at the same rank.
+    if (edge.type !== 'straight') {
+      dagreGraph.setEdge(edge.source, edge.target);
     }
   });
 
   dagre.layout(dagreGraph);
 
   const newNodes = nodes.map((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
+    const nodeWithPosition = dagreGraph.node(node.id) || { x: Math.random() * 200, y: Math.random() * 200 };
     const newNode = { ...node };
 
     newNode.position = {
@@ -60,6 +61,29 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
     };
 
     return newNode;
+  });
+
+  // Post-process to align spouses exactly and pull disconnected spouses together
+  edges.forEach((edge) => {
+    if (edge.type === 'straight') {
+      const srcNode = newNodes.find(n => n.id === edge.source);
+      const tgtNode = newNodes.find(n => n.id === edge.target);
+      if (srcNode && tgtNode) {
+        // Enforce same Y coordinate (take the maximum Y, pushing them down together)
+        const targetY = Math.max(srcNode.position.y || 0, tgtNode.position.y || 0);
+        srcNode.position.y = targetY;
+        tgtNode.position.y = targetY;
+
+        // Ensure they are close horizontally if dagre placed them far apart
+        // Typically dagre nodesep is 60, nodeWidth is 180.
+        // We can optionally pull tgtNode next to srcNode if they are too far
+        const xDist = Math.abs(srcNode.position.x - tgtNode.position.x);
+        if (xDist > nodeWidth * 2) {
+           // Basic heuristic pulling:
+           tgtNode.position.x = srcNode.position.x + nodeWidth + 60;
+        }
+      }
+    }
   });
 
   return { nodes: newNodes, edges };
@@ -102,10 +126,11 @@ export default function NetworkTree({
             id: r.id,
             source: r.person_a,
             target: r.person_b,
+            sourceHandle: 'right', // line starts from right side of husband
+            targetHandle: 'left', // line ends at left side of wife
             type: 'straight',
             style: { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5' },
             animated: true,
-            label: 'Vợ/Chồng',
             labelStyle: { fill: '#b45309', fontWeight: 700, fontSize: 10 },
           };
         } else {
