@@ -9,12 +9,26 @@ import {
   Controls,
   Background,
   MarkerType,
+  Handle,
+  Position,
 } from '@xyflow/react';
 import dagre from 'dagre';
 import { Person, Relationship } from '@/types';
 
 const nodeWidth = 180;
 const nodeHeight = 60;
+
+const CustomNode = ({ data }: any) => {
+  return (
+    <div style={data.style}>
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      {data.label}
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+    </div>
+  );
+};
+
+const nodeTypes = { custom: CustomNode };
 
 const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -56,18 +70,21 @@ export default function NetworkTree({
   const initialNodes = useMemo(() => {
     return Array.from(personsMap.values()).map(person => ({
       id: person.id,
-      data: { label: person.full_name },
+      type: 'custom',
+      data: { 
+        label: person.full_name,
+        style: {
+          background: person.gender === 'male' ? '#e0f2fe' : person.gender === 'female' ? '#ffe4e6' : '#f5f5f4',
+          border: '1px solid #d6d3d1',
+          borderRadius: '8px',
+          padding: '10px',
+          fontWeight: 'bold',
+          color: '#1c1917',
+          width: nodeWidth,
+          textAlign: 'center' as const
+        }
+      },
       position: { x: 0, y: 0 },
-      style: {
-        background: person.gender === 'male' ? '#e0f2fe' : person.gender === 'female' ? '#ffe4e6' : '#f5f5f4',
-        border: '1px solid #d6d3d1',
-        borderRadius: '8px',
-        padding: '10px',
-        fontWeight: 'bold',
-        color: '#1c1917',
-        width: nodeWidth,
-        textAlign: 'center' as const
-      }
     }));
   }, [personsMap]);
 
@@ -107,24 +124,15 @@ export default function NetworkTree({
     [initialNodes, initialEdges]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
-
-  useEffect(() => {
-    setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
-  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
-
   return (
-    <div className="w-full h-full min-h-[70vh] bg-stone-50/50 rounded-2xl border border-stone-200 overflow-hidden relative shadow-inner">
+    <div className="w-full h-[70vh] bg-stone-50/50 rounded-2xl border border-stone-200 overflow-hidden relative shadow-inner">
       <div className="absolute top-2 right-2 z-50 bg-black/80 text-white p-2 rounded text-xs font-mono">
-        DEBUG: personsMap={personsMap.size}, layoutedNodes={layoutedNodes.length}, nodes={nodes.length}, edges={edges.length}
+        DEBUG: personsMap={personsMap.size}, layoutedNodes={layoutedNodes.length}, edges={layoutedEdges.length}
       </div>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        nodes={layoutedNodes}
+        edges={layoutedEdges}
+        nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-right"
       >
