@@ -33,14 +33,19 @@ const nodeTypes = { custom: CustomNode };
 const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: direction });
+  dagreGraph.setGraph({ rankdir: direction, align: 'UL', nodesep: 60, ranksep: 100, edgesep: 30 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
   });
 
   edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
+    if (edge.type === 'straight') {
+      // For marriage, minlen 0 allows same rank, weight keeps them close
+      dagreGraph.setEdge(edge.source, edge.target, { minlen: 0, weight: 10 });
+    } else {
+      dagreGraph.setEdge(edge.source, edge.target, { minlen: 1, weight: 1 });
+    }
   });
 
   dagre.layout(dagreGraph);
