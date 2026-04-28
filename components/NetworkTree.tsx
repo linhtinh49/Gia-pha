@@ -122,7 +122,7 @@ const getLayoutedElements = (personsMap: Map<string, Person>, relationships: Rel
       finalNodes.push({
         id: famId,
         type: 'custom',
-        data: { label: '', style: { width: 1, height: 1, padding: 0, border: 'none', background: 'transparent' } },
+        data: { label: '', style: { width: '1px', height: '1px', padding: '0px', border: 'none', background: 'transparent' } },
         position: {
           x: leftNode.position.x + nodeWidth + ((rightNode.position.x - (leftNode.position.x + nodeWidth)) / 2),
           y: targetY + (nodeHeight / 2),
